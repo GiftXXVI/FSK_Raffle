@@ -1,5 +1,7 @@
 from flask import Flask
 from import request, jsonify, abort
+from random import shuffle, sample, choices
+import numpy as np
 from flask_cors import CORS
 import os
 
@@ -23,16 +25,28 @@ def after_request(response):
 @APP.route('/winners/get',methods=['POST'])
 def get_winner():
     body = request.get_json()
+    rng = np.random.default_rng()
+    n = 1
+    p = 0.5
+    flip = rng.random.binomial(n,p)
     if body is None:
         abort(400)
     else:
         participants = body.get('participants',None)
-        num_winners = body.get('num_winners',None)
-        winners = random.choices(participants,k=num_winners)
-        return jsonify({
-            'success':True,
-            'winners':winners
-        })
+        num_winners = body.get('num_winners',1)
+        if participants is None or num_winners > len(participants):
+            abort(422)
+        else:
+            if flip < p:
+                random.shuffle(participants)
+                winners = random.choices(participants,k=num_winners)
+            else:
+                rng.shuffle(participants)
+                winners = rng.random.choice(participants, num_winners)
+            return jsonify({
+                'success':True,
+                'winners':winners
+            })
 
 
 @APP.errorhandler(422)
