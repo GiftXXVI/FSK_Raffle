@@ -1,17 +1,20 @@
 from flask import Flask
-from import request, jsonify, abort
+from flask import request, jsonify, abort
 from random import shuffle, sample, choices
 import numpy as np
 from flask_cors import CORS
 import os
+
 
 def create_app(test_mode=False):
     app = Flask(__name__)
     CORS(app)
     return app
 
+
 test_mode = os.getenv('TEST_MODE')
 APP = create_app(test_mode)
+
 
 @APP.after_request
 def after_request(response):
@@ -22,30 +25,31 @@ def after_request(response):
     return response
 
 
-@APP.route('/winners/get',methods=['POST'])
+@APP.route('/winners/get', methods=['POST'])
 def get_winner():
     body = request.get_json()
     rng = np.random.default_rng()
     n = 1
     p = 0.5
-    flip = rng.random.binomial(n,p)
+    flip = rng.binomial(n, p)
     if body is None:
         abort(400)
     else:
-        participants = body.get('participants',None)
-        num_winners = body.get('num_winners',1)
+        participants = body.get('participants', None)
+        num_winners = body.get('num_winners', 1)
         if participants is None or num_winners > len(participants):
             abort(422)
         else:
             if flip < p:
-                random.shuffle(participants)
-                winners = random.choices(participants,k=num_winners)
+                shuffle(participants)
+                winners = choices(participants, k=num_winners)
             else:
                 rng.shuffle(participants)
-                winners = rng.random.choice(participants, num_winners)
+                np_winners = rng.choice(participants, num_winners)
+                winners = np_winners.tolist()
             return jsonify({
-                'success':True,
-                'winners':winners
+                'success': True,
+                'winners': winners
             })
 
 
@@ -58,6 +62,7 @@ def error_422(error):
         'message': message.lower()
     }), 422
 
+
 @APP.errorhandler(400)
 def error_400(error):
     message = 'bad request'
@@ -67,6 +72,7 @@ def error_400(error):
         'message': message.lower()
     }), 400
 
+
 @APP.errorhandler(500)
 def error_500(error):
     message = 'server error'
@@ -75,6 +81,7 @@ def error_500(error):
         'error': 500,
         'message': message.lower()
     }), 500
+
 
 @APP.errorhandler(403)
 def error_403(error):
@@ -94,6 +101,7 @@ def error_405(error):
         'error': 405,
         'message': message.lower()
     }), 405
+
 
 if __name__ == '__main__':
     APP.run(host='0.0.0.0', port=8080, debug=True)
